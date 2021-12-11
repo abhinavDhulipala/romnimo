@@ -1,226 +1,94 @@
-"""
-ZetCode Tkinter tutorial
-
-This is a simple Snake game
-clone.
-
-Author: Jan Bodnar
-Website: zetcode.com
-"""
-
-import sys
-import random
-from PIL import Image, ImageTk
-from tkinter import Tk, Frame, Canvas, ALL, NW
+from enum import Enum
+from config import Config
+import arcade
 
 
-class Cons:
-    BOARD_WIDTH = 300
-    BOARD_HEIGHT = 300
-    DELAY = 100
-    DOT_SIZE = 10
-    MAX_RAND_POS = 27
+class RoadTiles(Enum):
+    CRASH = arcade.color.CRIMSON_GLORY
+    EMPTY = arcade.color.CHAMPAGNE
+    CAR1 = arcade.color.UNIVERSITY_OF_CALIFORNIA_GOLD
+    PATH1 = arcade.color.JADE
+    CAR2 = arcade.color.CATALINA_BLUE
+    PATH2 = arcade.color.KHAKI
+    RIDER = arcade.color.BATTLESHIP_GREY
 
 
-class Board(Canvas):
+class RoadEnvironment(arcade.Window):
+    """
+    Main application class.
+    """
 
-    def __init__(self):
-        super().__init__(width=Cons.BOARD_WIDTH, height=Cons.BOARD_HEIGHT,
-                         background="black", highlightthickness=0)
+    def __init__(self, width, height, title):
+        """
+        Set up the application.
+        """
+        super().__init__(width, height, title)
 
-        self.initGame()
-        self.pack()
+        # Create a 2 dimensional array. A two dimensional
+        self.grid: RoadTiles = [[RoadTiles.EMPTY] * Config.COLUMN_COUNT for _ in range(Config.ROW_COUNT)]
 
-    def initGame(self):
-        """initializes game"""
+        arcade.set_background_color(arcade.color.BLACK)
 
-        self.inGame = True
-        self.dots = 3
-        self.score = 0
+        self.grid_sprite_list = arcade.SpriteList()
 
-        # variables used to move snake object
-        self.moveX = Cons.DOT_SIZE
-        self.moveY = 0
+        # Create a list of solid-color sprites to represent each grid location
+        for row in range(Config.ROW_COUNT):
+            for column in range(Config.COLUMN_COUNT):
+                x = column * (Config.WIDTH + Config.MARGIN) + (Config.WIDTH / 2 + Config.MARGIN)
+                y = row * (Config.HEIGHT + Config.MARGIN) + (Config.HEIGHT / 2 + Config.MARGIN)
+                sprite = arcade.SpriteSolidColor(Config.WIDTH, Config.HEIGHT, RoadTiles.EMPTY.value)
+                sprite.set_position(x, y)
+                self.grid_sprite_list.append(sprite)
+        self.resync_grid_with_sprites()
 
-        # starting apple coordinates
-        self.appleX = 100
-        self.appleY = 190
+    def resync_grid_with_sprites(self):
 
-        self.loadImages()
+        for i, row in enumerate(self.grid):
+            for j, cell in enumerate(row):
+                # We need to convert our two dimensional grid to our
+                # one-dimensional sprite list. For example a 10x10 grid might have
+                # row 2, column 8 mapped to location 28. (Zero-basing throws things
+                # off, but you get the idea.)
+                # ALTERNATIVELY you could set self.grid_sprite_list[pos].texture
+                # to different textures to change the image instead of the color.
+                pos = i * Config.COLUMN_COUNT + j
+                self.grid_sprite_list[pos].color = cell.value
 
-        self.createObjects()
-        self.locateApple()
-        self.bind_all("<Key>", self.onKeyPressed)
-        self.after(Cons.DELAY, self.onTimer)
+    def on_draw(self):
+        # This command has to happen before we start drawing
+        arcade.start_render()
 
-    def loadImages(self):
-        '''loads images from the disk'''
+        self.grid_sprite_list.draw()
 
-        try:
-            self.idot = Image.open("dot.png")
-            self.dot = ImageTk.PhotoImage(self.idot)
-            self.ihead = Image.open("head.png")
-            self.head = ImageTk.PhotoImage(self.ihead)
-            self.iapple = Image.open("apple.png")
-            self.apple = ImageTk.PhotoImage(self.iapple)
+    def on_mouse_press(self, x, y, button, modifiers):
+        """
+        Called when the user presses a mouse button.
+        """
 
-        except IOError as e:
+        # Change the x/y screen coordinates to grid coordinates
+        column = x // (Config.WIDTH + Config.MARGIN)
+        row = y // (Config.HEIGHT + Config.MARGIN)
 
-            print(e)
-            sys.exit(1)
+        print(f"Click coordinates: ({x}, {y}). Grid coordinates: ({row}, {column})")
 
-    def createObjects(self):
-        '''creates objects on Canvas'''
+        # Make sure we are on-grid. It is possible to click in the upper right
+        # corner in the margin and go to a grid location that doesn't exist
+        if row < Config.ROW_COUNT and column < Config.COLUMN_COUNT:
+            if button == arcade.MOUSE_BUTTON_LEFT:
+                self.grid[row][column] = RoadTiles.CRASH if self.grid[row][column] == RoadTiles.EMPTY else RoadTiles.EMPTY
+            elif button == arcade.MOUSE_BUTTON_RIGHT:
+                self.grid[row][column] = RoadTiles.RIDER if self.grid[row][column] == RoadTiles.EMPTY else RoadTiles.EMPTY
+            print(f'Tile: {self.grid[row][column]}')
 
-        self.create_text(30, 10, text="Score: {0}".format(self.score),
-                         tag="score", fill="white")
-        self.create_image(self.appleX, self.appleY, image=self.apple,
-                          anchor=NW, tag="apple")
-        self.create_image(50, 50, image=self.head, anchor=NW, tag="head")
-        self.create_image(30, 50, image=self.dot, anchor=NW, tag="dot")
-        self.create_image(40, 50, image=self.dot, anchor=NW, tag="dot")
+        print(f"Click coordinates: ({x}, {y}). Grid coordinates: ({row}, {column})")
 
-    def checkAppleCollision(self):
-        '''checks if the head of snake collides with apple'''
-
-        apple = self.find_withtag("apple")
-        head = self.find_withtag("head")
-
-        x1, y1, x2, y2 = self.bbox(head)
-        overlap = self.find_overlapping(x1, y1, x2, y2)
-
-        for ovr in overlap:
-
-            if apple[0] == ovr:
-                self.score += 1
-                x, y = self.coords(apple)
-                self.create_image(x, y, image=self.dot, anchor=NW, tag="dot")
-                self.locateApple()
-
-    def moveSnake(self):
-        '''moves the Snake object'''
-
-        dots = self.find_withtag("dot")
-        head = self.find_withtag("head")
-
-        items = dots + head
-
-        z = 0
-        while z < len(items) - 1:
-            c1 = self.coords(items[z])
-            c2 = self.coords(items[z + 1])
-            self.move(items[z], c2[0] - c1[0], c2[1] - c1[1])
-            z += 1
-
-        self.move(head, self.moveX, self.moveY)
-
-    def checkCollisions(self):
-        '''checks for collisions'''
-
-        dots = self.find_withtag("dot")
-        head = self.find_withtag("head")
-
-        x1, y1, x2, y2 = self.bbox(head)
-        overlap = self.find_overlapping(x1, y1, x2, y2)
-
-        for dot in dots:
-            for over in overlap:
-                if over == dot:
-                    self.inGame = False
-
-        if x1 < 0:
-            self.inGame = False
-
-        if x1 > Cons.BOARD_WIDTH - Cons.DOT_SIZE:
-            self.inGame = False
-
-        if y1 < 0:
-            self.inGame = False
-
-        if y1 > Cons.BOARD_HEIGHT - Cons.DOT_SIZE:
-            self.inGame = False
-
-    def locateApple(self):
-        '''places the apple object on Canvas'''
-
-        apple = self.find_withtag("apple")
-        self.delete(apple[0])
-
-        r = random.randint(0, Cons.MAX_RAND_POS)
-        self.appleX = r * Cons.DOT_SIZE
-        r = random.randint(0, Cons.MAX_RAND_POS)
-        self.appleY = r * Cons.DOT_SIZE
-
-        self.create_image(self.appleX, self.appleY, anchor=NW,
-                          image=self.apple, tag="apple")
-
-    def onKeyPressed(self, e):
-        '''controls direction variables with cursor keys'''
-
-        key = e.keysym
-
-        LEFT_CURSOR_KEY = "Left"
-        if key == LEFT_CURSOR_KEY and self.moveX <= 0:
-            self.moveX = -Cons.DOT_SIZE
-            self.moveY = 0
-
-        RIGHT_CURSOR_KEY = "Right"
-        if key == RIGHT_CURSOR_KEY and self.moveX >= 0:
-            self.moveX = Cons.DOT_SIZE
-            self.moveY = 0
-
-        RIGHT_CURSOR_KEY = "Up"
-        if key == RIGHT_CURSOR_KEY and self.moveY <= 0:
-            self.moveX = 0
-            self.moveY = -Cons.DOT_SIZE
-
-        DOWN_CURSOR_KEY = "Down"
-        if key == DOWN_CURSOR_KEY and self.moveY >= 0:
-            self.moveX = 0
-            self.moveY = Cons.DOT_SIZE
-
-    def onTimer(self):
-        '''creates a game cycle each timer event'''
-
-        self.drawScore()
-        self.checkCollisions()
-
-        if self.inGame:
-            self.checkAppleCollision()
-            self.moveSnake()
-            self.after(Cons.DELAY, self.onTimer)
-        else:
-            self.gameOver()
-
-    def drawScore(self):
-        '''draws score'''
-
-        score = self.find_withtag("score")
-        self.itemconfigure(score, text="Score: {0}".format(self.score))
-
-    def gameOver(self):
-        '''deletes all objects and draws game over message'''
-
-        self.delete(ALL)
-        self.create_text(self.winfo_width() / 2, self.winfo_height() / 2,
-                         text="Game Over with score {0}".format(self.score), fill="white")
-
-
-class Snake(Frame):
-
-    def __init__(self):
-        super().__init__()
-
-        self.master.title('Snake')
-        self.board = Board()
-        self.pack()
+        self.resync_grid_with_sprites()
 
 
 def main():
-    root = Tk()
-    Snake()
-    root.mainloop()
+    RoadEnvironment(Config.SCREEN_WIDTH, Config.SCREEN_HEIGHT, Config.SCREEN_TITLE)
+    arcade.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
