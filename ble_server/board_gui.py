@@ -23,8 +23,7 @@ class RoadEnvironment(arcade.Window):
         # Create a 2 dimensional array. A two dimensional
         self.grid: nx.Graph = nx.grid_2d_graph(Config.ROW_COUNT, Config.COLUMN_COUNT)
         self.grid.edges(data=True)
-        for e in self.grid.edges:
-            self.grid.edges[e]['weight'] = 1
+
 
         for val in self.grid.nodes.values():
             val['state'] = RoadTile.EMPTY
@@ -51,7 +50,7 @@ class RoadEnvironment(arcade.Window):
             self.car1 = Car(RoadTile.CAR1, RoadTile.PATH1, self.grid, nx.shortest_path(self.grid, source=car1, target=self.riders.remove(car1_closest_rider))[car1_closest_rider])
             self.car2 = Car(RoadTile.CAR2, RoadTile.PATH2, self.grid, nx.shortest_path(self.grid, source=car2, target=self.riders.remove(car2_closest_rider))[car2_closest_rider])
 
-            
+
         arcade.set_background_color(arcade.color.BLACK)
 
         self.grid_sprite_list = arcade.SpriteList()
@@ -93,25 +92,34 @@ class RoadEnvironment(arcade.Window):
 
         # Make sure we are on-grid. It is possible to click in the upper right
         # corner in the margin and go to a grid location that doesn't exist
-        cur_state = None
-        if row < Config.ROW_COUNT and column < Config.COLUMN_COUNT:
-            cur_state = self.grid.nodes[(row, column)]['state']
+        node = (row, column)
+
+        if row < Config.ROW_COUNT and column < Config.COLUMN_COUNT and self.grid.nodes[node]['state'] not in {RoadTile.CAR1, RoadTile.CAR2}:
+            cur_state = self.grid.nodes[node]['state']
             if button == arcade.MOUSE_BUTTON_LEFT:
-                self.grid.nodes[(row, column)]['state'] = RoadTile.CRASH if cur_state == RoadTile.EMPTY else RoadTile.EMPTY
+                if cur_state != RoadTile.CRASH:
+                    self._adj_tile_edges(node, RoadTile.CRASH, float('inf'))
+                else:
+                    self._adj_tile_edges(node, RoadTile.EMPTY, 1)
             elif button == arcade.MOUSE_BUTTON_RIGHT:
-                self.grid.nodes[(row, column)]['state'] = RoadTile.RIDER if cur_state == RoadTile.EMPTY else RoadTile.EMPTY
-            print(f"Tile: {self.grid.nodes[(row, column)]['state']}")
+                if cur_state != RoadTile.RIDER:
+                    self._adj_tile_edges(node, RoadTile.RIDER, float('inf'))
+                else:
+                    self._adj_tile_edges(node, RoadTile.EMPTY, 1)
+            print(f"Tile: {self.grid.nodes[node]['state']}")
 
-        print(f"Click coordinates: ({x}, {y}). Grid coordinates: ({row}, {column})")
-
+        self.car1.refresh_spt()
+        self.car2.refresh_spt()
         self.resync_grid_with_sprites()
-
-    def recompute_spt(self):
-        pass
 
     def debug_graph(self):
         A = nx.nx_agraph.to_agraph(self.grid)
         A.draw('debug.png', prog='neato')
+
+    def _adj_tile_edges(self, node, new_tile, weight):
+        self.grid.nodes[node]['state'] = new_tile
+        for e1, e2 in self.grid.edges(node):
+            self.grid[e1][e2]['weight'] = weight
 
 
 def main():

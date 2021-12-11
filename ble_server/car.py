@@ -19,7 +19,7 @@ class Car:
     def __init__(self, car_tile, path_tile, graph, path) -> None:
         self.car_tile: RoadTile = car_tile
         self.path_tile: RoadTile = path_tile
-        self.current_rider: bool = False
+        self.current_rider: bool = True
         self.graph: nx.Graph = graph
         self.path: List[tuple] = path
         self.graph.nodes[self.path[0]]['state'] = self.car_tile
@@ -30,10 +30,9 @@ class Car:
 
     @path.setter
     def path(self, o :List[tuple]) -> None:
-        self.current_rider = not self.current_rider
+        print(f'log path setter called')
         self._path = o
         for p in filter(lambda p: self.graph.nodes[p]['state'] == RoadTile.EMPTY, self._path[1:-1]):
-            
             self.graph.nodes[p]['state'] = self.path_tile
 
 
@@ -51,9 +50,17 @@ class Car:
     """
     def move(self) -> CarRequest:
         if self.has_arrived():
-            return CarRequest.RIDER if self.current_rider else CarRequest.DESITNATION
+            self.current_rider = False
+            return CarRequest.RIDER if not self.current_rider else CarRequest.DESITNATION
         
         prev = self.path.pop(0)
         self.graph.nodes[prev]['state'] = RoadTile.EMPTY
         self.graph.nodes[self.path[0]]['state'] = self.car_tile
+
+    def refresh_spt(self):
+        # purge old path
+        for p in filter(lambda p: self.graph.nodes[p]['state'] == self.path_tile, self._path[1:-1]):
+            self.graph.nodes[p]['state'] = RoadTile.EMPTY
+        self.path = nx.shortest_path(self.graph, self.path[0], self.path[-1], weight="weight")
+        
         
