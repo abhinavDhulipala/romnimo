@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import networkx as nx
 from typing import List
-from config import RoadTile, CarRequest
+from config import Config, RoadTile, CarRequest
 
 @dataclass
 class Car:
@@ -30,10 +30,14 @@ class Car:
 
     @path.setter
     def path(self, o :List[tuple]) -> None:
-        print(f'log path setter called')
         self._path = o
-        for p in filter(lambda p: self.graph.nodes[p]['state'] == RoadTile.EMPTY, self._path[1:-1]):
-            self.graph.nodes[p]['state'] = self.path_tile
+        for p in self.filter_out_populated():
+            tile = self.graph.nodes[p]['state']
+            if RoadTile.is_path_tile(tile):
+                self.graph.nodes[p]['state'] = RoadTile.PATH_COLLIDE
+            else:
+                self.graph.nodes[p]['state'] = self.path_tile
+            
 
 
     def has_arrived(self) -> bool:
@@ -59,8 +63,39 @@ class Car:
 
     def refresh_spt(self):
         # purge old path
-        for p in filter(lambda p: self.graph.nodes[p]['state'] == self.path_tile, self._path[1:-1]):
-            self.graph.nodes[p]['state'] = RoadTile.EMPTY
-        self.path = nx.shortest_path(self.graph, self.path[0], self.path[-1], weight="weight")
-        
+        for p in self.filter_out_populated():
+            tile = self.graph.nodes[p]['state']
+            if tile == RoadTile.PATH_COLLIDE:
+                self.graph.nodes[p]['state'] = RoadTile.PATH2 if self.path_tile == RoadTile.PATH1 else RoadTile.PATH1
+            else:
+                self.graph.nodes[p]['state'] = RoadTile.EMPTY
+        self.path = nx.shortest_path(self.graph, self.path[0], self.path[-1], weight='weight')
+
+    """
+    @returns a filter of all tiles that should be adjusted. any tile with a car, destination, rider.
+    In other words any "populated" tile
+    """
+    def filter_out_populated(self) -> filter:
+        return filter(lambda p: not RoadTile.is_populated(self.graph.nodes[p]['state']), self._path)
+
+@dataclass
+class Rider:
+    start: tuple
+    destination: tuple
+
+    def __init__(self, start, dest, graph) -> None:
+        self.start = start
+        self.destination = dest
+        self.graph = graph
+        self.graph.nodes[start]['state'] = RoadTile.RIDER
+
+    def pickup(self):
+        self.graph.nodes[self.destination]['state'] = RoadTile
+
+    def gen_top_2_corners(graph: nx.Graph):
+        return [Rider((Config.COLUMN_COUNT - 1, Config.ROW_COUNT - 1), (0, 0), graph),
+          Rider((Config.COLUMN_COUNT - 1, Config.ROW_COUNT - 2), (1, 0), graph)]
+
+
+
         

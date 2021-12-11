@@ -1,9 +1,7 @@
-from networkx.algorithms.centrality.current_flow_betweenness_subset import current_flow_betweenness_centrality_subset
 from config import Config, RoadTile
 import networkx as nx
 import arcade
-from collections import deque
-from car import Car
+from utils import Car, Rider
 from typing import List
 
 
@@ -11,14 +9,14 @@ class RoadEnvironment(arcade.Window):
     """
     Main application class.
     """
-
+    
     def __init__(self, width, height, title, car1=(0, 0), car2=(1,0), 
-        riders=[(Config.ROW_COUNT - 1, Config.COLUMN_COUNT - 1), (Config.ROW_COUNT - 1, Config.COLUMN_COUNT - 2)]):
+        riders=None):
         """
         Set up the application.
         """
         super().__init__(width, height, title)
-        self.riders: List = riders
+        
 
         # Create a 2 dimensional array. A two dimensional
         self.grid: nx.Graph = nx.grid_2d_graph(Config.ROW_COUNT, Config.COLUMN_COUNT)
@@ -28,33 +26,31 @@ class RoadEnvironment(arcade.Window):
         for val in self.grid.nodes.values():
             val['state'] = RoadTile.EMPTY
 
-        for r in riders:
-            self.grid.nodes[r]['state'] = RoadTile.RIDER
+        self.riders: List = riders or Rider.gen_top_2_corners(self.grid)
 
         # closest passenger for car1
-        car1_closest_rider = min(self.riders, key=lambda r: nx.shortest_path_length(self.grid, car1, r))
+        car1_closest_rider = self.closest_rider(car1)
         # closest passenger for car2
-        car2_closest_rider = min(self.riders, key=lambda r: nx.shortest_path_length(self.grid, car2, r))
+        car2_closest_rider = self.closest_rider(car2)
         self.car1, self.car2 = None, None
         if car1_closest_rider == car2_closest_rider:
-            c1_length, c2_length = nx.shortest_path_length(self.grid, car1, car2_closest_rider), nx.shortest_path_length(self.grid, car2, car2_closest_rider)
+            c1_length, c2_length = nx.shortest_path_length(self.grid, car1, car2_closest_rider.start), nx.shortest_path_length(self.grid, car2, car2_closest_rider.start)
             if c1_length < c2_length:
-                self.car1 = Car(RoadTile.CAR1, RoadTile.PATH1, self.grid, nx.shortest_path(self.grid, car1, self.riders.remove(car1_closest_rider)[car1_closest_rider]))
-                car2_closest_rider = min(self.riders, key=lambda r: nx.shortest_path_length(self.grid, car2, r))
-                self.car2 = Car(RoadTile.CAR2, RoadTile.PATH2, self.grid, nx.shortest_path(self.grid, car2, self.riders.remove(car2_closest_rider))[car2_closest_rider])
+                self.pop_rider_spawn_car(car1, car1_closest_rider, 1)
+                car2_closest_rider = self.closest_rider(car2)
+                self.pop_rider_spawn_car(car2, car2_closest_rider, 2)
             else:
-                self.car2 = Car(RoadTile.CAR2, RoadTile.PATH2, self.grid, nx.shortest_path(self.grid, car2, self.riders.remove(car2_closest_rider))[car2_closest_rider])
-                car1_closest_rider = min(self.riders, key=lambda r: nx.shortest_path_length(self.grid, car1, r))
-                self.car1 = Car(RoadTile.CAR1, RoadTile.PATH1, self.grid, nx.shortest_path(self.grid, car1, self.riders.remove(car1_closest_rider))[car1_closest_rider])
+                self.pop_rider_spawn_car(car2, car2_closest_rider, 2)
+                car1_closest_rider = self.closest_rider(car1)
+                self.pop_rider_spawn_car(car1, car1_closest_rider, 1)
         else:
-            self.car1 = Car(RoadTile.CAR1, RoadTile.PATH1, self.grid, nx.shortest_path(self.grid, source=car1, target=self.riders.remove(car1_closest_rider))[car1_closest_rider])
-            self.car2 = Car(RoadTile.CAR2, RoadTile.PATH2, self.grid, nx.shortest_path(self.grid, source=car2, target=self.riders.remove(car2_closest_rider))[car2_closest_rider])
+            self.pop_rider_spawn_car(car2, car2_closest_rider, 2)
+            self.pop_rider_spawn_car(car1, car1_closest_rider, 1)
 
 
         arcade.set_background_color(arcade.color.BLACK)
 
         self.grid_sprite_list = arcade.SpriteList()
-        print(self.grid.edges.data)
         # Create a list of solid-color sprites to represent each grid location
         for row, column in self.grid.nodes:
             x = column * (Config.WIDTH + Config.MARGIN) + (Config.WIDTH / 2 + Config.MARGIN)
@@ -63,6 +59,15 @@ class RoadEnvironment(arcade.Window):
             sprite.set_position(x, y)
             self.grid_sprite_list.append(sprite)
         self.resync_grid_with_sprites()
+
+    def closest_rider(self, car):
+        return min(self.riders, key=lambda r: nx.shortest_path_length(self.grid, car, r.start))
+
+    def pop_rider_spawn_car(self, car, rider, car_num):
+        if car_num == 1:
+            self.car1 = Car(RoadTile.CAR1, RoadTile.PATH1, self.grid, nx.shortest_path(self.grid, car, self.riders.remove(rider))[rider.start])
+        elif car_num == 2:
+            self.car2 = Car(RoadTile.CAR2, RoadTile.PATH2, self.grid, nx.shortest_path(self.grid, car, self.riders.remove(rider))[rider.start])
 
     def resync_grid_with_sprites(self):
 
