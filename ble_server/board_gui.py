@@ -1,5 +1,6 @@
 from enum import Enum
 from config import Config
+import networkx as nx
 import arcade
 
 
@@ -18,14 +19,16 @@ class RoadEnvironment(arcade.Window):
     Main application class.
     """
 
-    def __init__(self, width, height, title):
+    def __init__(self, width, height, title, ):
         """
         Set up the application.
         """
         super().__init__(width, height, title)
 
         # Create a 2 dimensional array. A two dimensional
-        self.grid: RoadTiles = [[RoadTiles.EMPTY] * Config.COLUMN_COUNT for _ in range(Config.ROW_COUNT)]
+        self.grid: nx.Graph = nx.grid_2d_graph(Config.ROW_COUNT, Config.COLUMN_COUNT)
+        for val in self.grid.nodes.values():
+            val['state'] = RoadTiles.EMPTY
 
         arcade.set_background_color(arcade.color.BLACK)
 
@@ -43,16 +46,15 @@ class RoadEnvironment(arcade.Window):
 
     def resync_grid_with_sprites(self):
 
-        for i, row in enumerate(self.grid):
-            for j, cell in enumerate(row):
-                # We need to convert our two dimensional grid to our
-                # one-dimensional sprite list. For example a 10x10 grid might have
-                # row 2, column 8 mapped to location 28. (Zero-basing throws things
-                # off, but you get the idea.)
-                # ALTERNATIVELY you could set self.grid_sprite_list[pos].texture
-                # to different textures to change the image instead of the color.
-                pos = i * Config.COLUMN_COUNT + j
-                self.grid_sprite_list[pos].color = cell.value
+        for (i, j), state in self.grid.nodes.data('state'):
+            # We need to convert our two dimensional grid to our
+            # one-dimensional sprite list. For example a 10x10 grid might have
+            # row 2, column 8 mapped to location 28. (Zero-basing throws things
+            # off, but you get the idea.)
+            # ALTERNATIVELY you could set self.grid_sprite_list[pos].texture
+            # to different textures to change the image instead of the color.
+            pos = i * Config.COLUMN_COUNT + j
+            self.grid_sprite_list[pos].color = state.value
 
     def on_draw(self):
         # This command has to happen before we start drawing
@@ -61,9 +63,6 @@ class RoadEnvironment(arcade.Window):
         self.grid_sprite_list.draw()
 
     def on_mouse_press(self, x, y, button, modifiers):
-        """
-        Called when the user presses a mouse button.
-        """
 
         # Change the x/y screen coordinates to grid coordinates
         column = x // (Config.WIDTH + Config.MARGIN)
@@ -74,15 +73,20 @@ class RoadEnvironment(arcade.Window):
         # Make sure we are on-grid. It is possible to click in the upper right
         # corner in the margin and go to a grid location that doesn't exist
         if row < Config.ROW_COUNT and column < Config.COLUMN_COUNT:
+            cur_state = self.grid.nodes[(row, column)]['state']
             if button == arcade.MOUSE_BUTTON_LEFT:
-                self.grid[row][column] = RoadTiles.CRASH if self.grid[row][column] == RoadTiles.EMPTY else RoadTiles.EMPTY
+                self.grid.nodes[(row, column)]['state'] = RoadTiles.CRASH if cur_state == RoadTiles.EMPTY else RoadTiles.EMPTY
             elif button == arcade.MOUSE_BUTTON_RIGHT:
-                self.grid[row][column] = RoadTiles.RIDER if self.grid[row][column] == RoadTiles.EMPTY else RoadTiles.EMPTY
-            print(f'Tile: {self.grid[row][column]}')
+                self.grid.nodes[(row, column)]['state'] = RoadTiles.RIDER if cur_state == RoadTiles.EMPTY else RoadTiles.EMPTY
+            print(f"Tile: {self.grid.nodes[(row, column)]['state']}")
 
         print(f"Click coordinates: ({x}, {y}). Grid coordinates: ({row}, {column})")
 
         self.resync_grid_with_sprites()
+
+    def debug_graph(self):
+        A = nx.nx_agraph.to_agraph(self.grid)
+        A.draw('debug.png', prog='neato')
 
 
 def main():
