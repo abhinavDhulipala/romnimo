@@ -56,7 +56,7 @@ class RoadEnvironment(arcade.Window):
         # if all cars have come to a stop
         # set them to start again and emit a start signal 
         # update them on the gui
-        if all(self.car_states):
+        if True or all(self.car_states):
             # in memory fill
             for i, _ in enumerate(self.car_states):
                 self.car_states[i] = 0

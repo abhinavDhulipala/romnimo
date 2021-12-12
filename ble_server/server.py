@@ -20,7 +20,8 @@ def test_asynch(shared_mem: List):
 def ble_listener(shared_mem: List):
     print(shared_mem)
 
-def server(env=os.getenv('ENV')):
+# test server to demo/test asynch events with commandline promps
+def test_server(env=os.getenv('ENV')):
     with SharedMemoryManager() as smm:
         robot_states = smm.ShareableList([0] * 2)
         listener_func = test_asynch if env == 'test' else ble_listener
@@ -31,4 +32,4 @@ def server(env=os.getenv('ENV')):
         print(robot_states)
 
 if __name__ == '__main__':
-    server('test')
+    test_server('test')

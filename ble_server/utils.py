@@ -58,16 +58,15 @@ class Car:
             # rider has been picked up so this means we have dropped them off
             if self.current_rider.pick_up:
                 self.current_rider = None
-                self.destination = None
                 return CarRequest.RIDER
             else:
                 self.current_rider.pick_up = True
-                self.destination = self.current_rider.destination
-                self.refresh_spt()
+                self.path = nx.shortest_path(self.graph, self.path[0], self.current_rider.destination)
                 return None
         
         prev = self.path.pop(0)
-        self.graph.nodes[prev]['state'] = RoadTile.EMPTY
+        if self.graph.nodes[prev]['state'] == self.car_tile:
+            self.graph.nodes[prev]['state'] = RoadTile.EMPTY
         self.graph.nodes[self.path[0]]['state'] = self.car_tile
 
     def refresh_spt(self):
