@@ -16,10 +16,10 @@ class Car:
     assumptions:
         - on init, we are garunteed a rider.
     """
-    def __init__(self, car_tile, path_tile, graph, path) -> None:
+    def __init__(self, car_tile, path_tile, graph, path, rider=None) -> None:
         self.car_tile: RoadTile = car_tile
         self.path_tile: RoadTile = path_tile
-        self.current_rider: bool = True
+        self.current_rider: Rider = rider
         self.graph: nx.Graph = graph
         self.path: List[tuple] = path
         self.graph.nodes[self.path[0]]['state'] = self.car_tile
@@ -36,8 +36,7 @@ class Car:
             if RoadTile.is_path_tile(tile):
                 self.graph.nodes[p]['state'] = RoadTile.PATH_COLLIDE
             else:
-                self.graph.nodes[p]['state'] = self.path_tile
-            
+                self.graph.nodes[p]['state'] = self.path_tile          
 
 
     def has_arrived(self) -> bool:
@@ -53,9 +52,19 @@ class Car:
     TODO: add bluetooth emit from here
     """
     def move(self) -> CarRequest:
+        if not self.current_rider:
+            return CarRequest.RIDER
         if self.has_arrived():
-            self.current_rider = False
-            return CarRequest.RIDER if not self.current_rider else CarRequest.DESITNATION
+            # rider has been picked up so this means we have dropped them off
+            if self.current_rider.pick_up:
+                self.current_rider = None
+                self.destination = None
+                return CarRequest.RIDER
+            else:
+                self.current_rider.pick_up = True
+                self.destination = self.current_rider.destination
+                self.refresh_spt()
+                return None
         
         prev = self.path.pop(0)
         self.graph.nodes[prev]['state'] = RoadTile.EMPTY
@@ -85,12 +94,11 @@ class Rider:
 
     def __init__(self, start, dest, graph) -> None:
         self.start = start
-        self.destination = dest
         self.graph = graph
+        self.destination = dest
         self.graph.nodes[start]['state'] = RoadTile.RIDER
+        self.pick_up = False
 
-    def pickup(self):
-        self.graph.nodes[self.destination]['state'] = RoadTile
 
     def gen_top_2_corners(graph: nx.Graph):
         return [Rider((Config.COLUMN_COUNT - 1, Config.ROW_COUNT - 1), (0, 0), graph),

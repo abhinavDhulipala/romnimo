@@ -1,6 +1,6 @@
 from enum import Enum, auto
 import arcade
-from pyglet.window.key import ROPTION
+import os
 
 class Config:
     # Set how many rows and columns we will have
@@ -19,6 +19,8 @@ class Config:
     SCREEN_WIDTH = (WIDTH + MARGIN) * COLUMN_COUNT + MARGIN
     SCREEN_HEIGHT = (HEIGHT + MARGIN) * ROW_COUNT + MARGIN
     SCREEN_TITLE = "Road Projection"
+    # interval of refresh rate in seconds
+    BLE_REFRESH_RATE = os.getenv('BLE_REFRESH_RATE') or 2
 
 class RoadTile(Enum):
     CRASH = arcade.color.CRIMSON_GLORY
