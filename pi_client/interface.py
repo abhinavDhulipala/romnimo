@@ -70,6 +70,18 @@ class PololuTIRSLKRobot(PololuDRV8835Robot):
 	def stop(self):
 		self._left_motor(0)
 		self._right_motor(0)
+	
+	def pd_control(self, speed, k_p, k_d):
+		prev_err = getCVError()	# implement this function to get the error using cv
+		while True:
+			curr_err = getCVError()
+			feedback = k_p * curr_err + k_d * (curr_err - prev_err)
+			left_speed = speed + feedback
+			right_speed = speed - feedback
+			self._left_motor(left_speed, True)
+			self._right_motor(right_speed, True)
+			sleep(50)
+
 		
 		
 
