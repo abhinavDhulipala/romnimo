@@ -111,7 +111,8 @@ class RoadEnvironment(arcade.Window):
                     self._adj_tile_edges(node, RoadTile.RIDER, float('inf'))
                 else:
                     self._adj_tile_edges(node, RoadTile.EMPTY, 1)
-            print(f"Tile: {self.grid.nodes[node]['state']}")
+            print(f"Click coordinates: ({x}, {y}). Grid coordinates: ({row}, {column}). Tile: {self.grid.nodes[node]['state']}")
+            
 
         self.car1.refresh_spt()
         self.car2.refresh_spt()
