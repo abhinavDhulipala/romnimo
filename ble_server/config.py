@@ -8,8 +8,8 @@ class Config:
     COLUMN_COUNT = 6
 
     # This sets the WIDTH and HEIGHT of each grid location
-    WIDTH = 30
-    HEIGHT = 30
+    WIDTH = 60
+    HEIGHT = 60
 
     # This sets the margin between each cell
     # and on the edges of the screen.
@@ -20,7 +20,7 @@ class Config:
     SCREEN_HEIGHT = (HEIGHT + MARGIN) * ROW_COUNT + MARGIN
     SCREEN_TITLE = "Road Projection"
     # interval of refresh rate in seconds
-    BLE_REFRESH_RATE = os.getenv('BLE_REFRESH_RATE') or 2
+    BLE_REFRESH_RATE = os.getenv('BLE_REFRESH_RATE') or 1.5
 
 class RoadTile(Enum):
     CRASH = arcade.color.CRIMSON_GLORY

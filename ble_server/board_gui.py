@@ -10,7 +10,7 @@ class RoadEnvironment(arcade.Window):
     Main application class.
     """
     
-    def __init__(self, width, height, title, car1=(0, 0), car2=(1,0), riders=[], shared_robot_states=[0]):
+    def __init__(self, width, height, title, car1=(5, 5), car2=(4,5), riders=[], shared_robot_states=[0]):
         """
         Set up the application.
         """
@@ -28,8 +28,8 @@ class RoadEnvironment(arcade.Window):
 
         self.riders: List = riders or Rider.gen_top_2_corners(self.grid)
 
-        self.car1 = Car(RoadTile.CAR1, RoadTile.PATH1, self.grid, [car1])
-        self.car2 = Car(RoadTile.CAR2, RoadTile.PATH2, self.grid, [car2])
+        self.car1 = Car(RoadTile.CAR1, self.grid, [car1])
+        self.car2 = Car(RoadTile.CAR2, self.grid, [car2])
 
         self._handle_car_conflict()
 

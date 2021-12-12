@@ -16,13 +16,17 @@ class Car:
     assumptions:
         - on init, we are garunteed a rider.
     """
-    def __init__(self, car_tile, path_tile, graph, path, rider=None) -> None:
+    def __init__(self, car_tile, graph, path, rider=None) -> None:
         self.car_tile: RoadTile = car_tile
-        self.path_tile: RoadTile = path_tile
+        self.path_tile: RoadTile = RoadTile.PATH1 if self.car_tile == RoadTile.CAR1 else RoadTile.PATH2
+        self.dest_tile: RoadTile = RoadTile.DEST1 if self.car_tile == RoadTile.CAR1 else RoadTile.DEST2
+        
         self.current_rider: Rider = rider
         self.graph: nx.Graph = graph
         self.path: List[tuple] = path
         self.graph.nodes[self.path[0]]['state'] = self.car_tile
+        if not self.has_arrived():
+            self.graph.nodes[self.path[-1]]['state'] = self.dest_tile
 
     @property
     def path(self) -> List[tuple]:
@@ -61,12 +65,15 @@ class Car:
                 return CarRequest.RIDER
             else:
                 self.current_rider.pick_up = True
-                self.path = nx.shortest_path(self.graph, self.path[0], self.current_rider.destination)
+                self._path = [self.current_rider.start, self.current_rider.destination]
+                self.graph.nodes[self.current_rider.destination]['state'] = self.dest_tile
+                self.refresh_spt()
                 return None
         
         prev = self.path.pop(0)
         if self.graph.nodes[prev]['state'] == self.car_tile:
             self.graph.nodes[prev]['state'] = RoadTile.EMPTY
+
         self.graph.nodes[self.path[0]]['state'] = self.car_tile
 
     def refresh_spt(self):
@@ -100,8 +107,8 @@ class Rider:
 
 
     def gen_top_2_corners(graph: nx.Graph):
-        return [Rider((Config.COLUMN_COUNT - 1, Config.ROW_COUNT - 1), (0, 0), graph),
-          Rider((Config.COLUMN_COUNT - 1, Config.ROW_COUNT - 2), (1, 0), graph)]
+        return [Rider((0, 0),(Config.COLUMN_COUNT - 1, Config.ROW_COUNT - 1), graph),
+          Rider((1, 0),(Config.COLUMN_COUNT - 1, Config.ROW_COUNT - 2),  graph)]
 
 
 
