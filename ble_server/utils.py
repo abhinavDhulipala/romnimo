@@ -48,7 +48,25 @@ class Car:
 
     def current_position(self) -> tuple:
         return self.path[0]
-    
+    """
+    @returns str: ['' | 'up' | 'down' | 'left' | 'right']
+    """
+    def command(self) -> str:
+        # stop if we have arrived
+        if self.has_arrived():
+            return ''
+        cur_row, cur_column = self.path[0]
+        next_row, next_column = self.path[1]
+        if cur_row < next_row:
+            return 'up'
+        if cur_row > next_row:
+            return 'down'
+        if cur_column < next_column:
+            return 'right'
+        if cur_column > next_column:
+            return 'left'
+
+
     """
     @returns None if we require recalculation of path. 
     if we have reached our destination, then we require a new path
