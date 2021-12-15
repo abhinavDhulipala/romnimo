@@ -47,6 +47,7 @@ class SocketServer:
                     else:
                         print('>>> Received: {}'.format(read_data.rstrip()))
                         if read_data.rstrip() == 'quit':
+                            x, y, deg = read_data
                             stop = True
                         else:
                             client_sock.send(read_data)
@@ -58,6 +59,12 @@ class SocketServer:
         print('Closing connection with {}'.format(client_addr))
         client_sock.close()
         return 0
+
+    def pd_control(theta, theta_d, k_p, k_d, prev_error):
+        error = theta - theta_d
+        feedback = k_p * error + k_d * (error - prev_error)
+        return feedback
+        
 
 def main():
     server = SocketServer(port=40000)
