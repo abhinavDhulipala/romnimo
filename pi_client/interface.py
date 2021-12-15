@@ -52,12 +52,10 @@ class PololuTIRSLKRobot(PololuDRV8835Robot):
 		self._right_motor(speed, False)
 		
 	def left(self, speed=1):
-		self.orient = (self.orient - 1) % 4
 		self._left_motor(speed, True)
 		self._right_motor(speed, False)
 		
 	def right(self, speed=1):
-		self.orient = (self.orient + 1) % 4
 		self._left_motor(speed, False)
 		self._right_motor(speed, True)
 	

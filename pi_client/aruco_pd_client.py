@@ -4,7 +4,7 @@ import select
 class SocketServer:
     """ Simple socket server that listens to one single client. """
 
-    def __init__(self, host ='0.0.0.0', port = 2010, array=None):
+    def __init__(self, host ='0.0.0.0', port=2010, array=None):
         """ Initialize the server with a host and port to listen to. """
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -47,10 +47,15 @@ class SocketServer:
                         stop = True
                     else:
                         print('>>> Received: {}'.format(read_data.rstrip()))
+                        if len(read_data.split()) != 3:
+                            continue
                         x, y, deg = read_data.split()
                         x, y = int(x), int(y)
                         deg = float(deg)
-                        self.array[:] = x, y, deg
+                        print(x, y, deg)
+                        self.array[0] = x
+                        self.array[1] = y
+                        self.array[2] = deg
             else:
                 print("No client is connected, SocketServer can't receive data")
 
