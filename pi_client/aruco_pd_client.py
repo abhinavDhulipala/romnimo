@@ -38,12 +38,13 @@ class SocketServer:
                 except select.error:
                     print('Select() failed on socket with {}'.format(client_addr))
                     return 1
+
                 if len(rdy_read) > 0:
                     read_data = client_sock.recv(255)
                     # Check if socket has been closed
                     if len(read_data) == 0:
                         print('{} closed the socket.'.format(client_addr))
-
+                        stop = True
                     else:
                         print('>>> Received: {}'.format(read_data.rstrip()))
                         x, y, deg = read_data.split()
@@ -59,9 +60,14 @@ class SocketServer:
         client_sock.close()
         return 0
 
-def main(pos):
-    server = SocketServer(port=40000, array=pos)
+    def pd_control(theta, theta_d, k_p, k_d, prev_error):
+        error = theta - theta_d
+        feedback = k_p * error + k_d * (error - prev_error)
+        return feedback
 
+
+def main():
+    server = SocketServer(port=40000)
     server.run_server()
 
     print('exiting')
