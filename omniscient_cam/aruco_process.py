@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 import cv2.aruco as aruco
 import time
+import math
 
 class Aruco_processor:
     def __init__(self, origin_mark=10):
@@ -40,6 +41,14 @@ class Aruco_processor:
         g_matrix[:3, :3] = rmat
         g_matrix[:3, 3] = tvec
         return np.linalg.inv(g_matrix)
+
+        # def get_idxs(self, ids, ms):
+    #     idxs = np.zeros(len(ms))
+    #     for i in range(len(ids)):
+    #         for j in range(len(ms)):
+    #             if ids[i] == ms[j]:
+    #                 idxs[j] = i 
+    #     return idxs
 
 
     def get_marker_transforms(self, frame, origin_id=10):
@@ -83,10 +92,54 @@ class Aruco_processor:
         g_ac = self.get_g(rvec[origin_idx], tvec[origin_idx])
         t_c = np.array([tvec[id_idx][0][0], tvec[id_idx][0][1], tvec[id_idx][0][2], 1])
         return g_ac @ t_c
+    
+    def rvec_to_deg(self, rveca, rvecb):
+        r_ca = cv2.Rodrigues(rveca)[0]
+        r_cb = cv2.Rodrigues(rvecb)[0]
+
+        r_ab = r_ca.T @ r_cb
+
+        theta_x = math.atan2(r_ab[2,1], r_ab[2,2]) * 180 / math.pi 
+        theta_y = math.atan2(-r_ab[2,0], math.sqrt(r_ab[2,1]**2 + r_ab[2,2]**2)) * 180 / math.pi
+        theta_z = math.atan2(r_ab[1,0], r_ab[0,0]) * 180 / math.pi
+
+        return theta_z
+        
+
+    def get_marker_orientation_by_id(self, frame, id_num, origin_id=10):
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        corners, ids, _ = aruco.detectMarkers(gray, self.aruco_dictionary, parameters=self.aruco_parameters)
+        if ids is None:
+            print("No markers")
+            return None
+        rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(corners, self.marker_size, self.camera_matrix, self.dist_coeff)
+        origin_idx = -1
+        id_idx = -1
+        ids = np.array(ids)[:, 0]
+        for i in range(len(ids)):
+            if ids[i] == origin_id:
+                origin_idx = i
+            if ids[i] == id_num:
+                id_idx = i
+        if origin_idx < 0 or id_idx < 0:
+            print("Origin or id is not in view")
+            return None
+        return self.rvec_to_deg(rvec[origin_idx], rvec[id_idx])
 
     def marker_to_grid(self, tvec):
         return np.array([round(tvec[0] / .2127), round(tvec[1] / .4647)])
     
+
+    # Call to get the car position
+    def get_car_pos(self, frame):
+        return self.marker_to_grid(self.get_marker_orientation_by_id(frame, 16))
+
+    # Call to get the car orientation
+    def get_car_deg(self, frame):
+        return self.get_marker_orientation_by_id(frame, 16)
+
+    #def get_crash_tiles(self)
+
 if __name__ == '__main__':
     print("Finding cam")
     cap = cv2.VideoCapture(1) 
@@ -95,26 +148,12 @@ if __name__ == '__main__':
     while(True):
         time.sleep(.5)
         ret, frame = cap.read()
-        t1 = ap.get_marker_coords_by_id(frame, 11)
-        t2 = ap.get_marker_coords_by_id(frame, 16)
-        t3 = ap.get_marker_coords_by_id(frame, 13)
-        t4 = ap.get_marker_coords_by_id(frame, 14)
-        t5 = ap.get_marker_coords_by_id(frame, 15)
+        t1 = ap.get_marker_coords_by_id(frame, 16)
         print("t1")
         if t1 is not None:
             print(ap.marker_to_grid(t1))
-        print("t2")
-        if t2 is not None:
-            print(ap.marker_to_grid(t2))
-        print("t3")
-        if t3 is not None:
-            print(ap.marker_to_grid(t3))
-        print("t4")
-        if t4 is not None:
-            print(ap.marker_to_grid(t4))
-        print("t5")
-        if t5 is not None:
-            print(ap.marker_to_grid(t5))
+        print("orientation")
+        print(ap.get_marker_orientation_by_id(frame, 16))
     cap.release()
     cv2.destroyAllWindows()
 
