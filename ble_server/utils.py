@@ -33,7 +33,7 @@ class Car:
         return self._path
 
     @path.setter
-    def path(self, o :List[tuple]) -> None:
+    def path(self, o: List[tuple]) -> None:
         self._path = o
         for p in self.filter_out_populated():
             tile = self.graph.nodes[p]['state']
@@ -49,22 +49,28 @@ class Car:
     def current_position(self) -> tuple:
         return self.path[0]
     """
-    @returns str: ['' | 'up' | 'down' | 'left' | 'right']
+    @returns int
     """
-    def command(self) -> str:
+    def command(self) -> int:
         # stop if we have arrived
         if self.has_arrived():
-            return ''
+            return -1
         cur_row, cur_column = self.path[0]
         next_row, next_column = self.path[1]
+        """
+        up; north: 0
+        right; east: 1
+        down; south: 2
+        left; west: 3       
+        """
         if cur_row < next_row:
-            return 'up'
+            return 0
         if cur_row > next_row:
-            return 'down'
+            return 2
         if cur_column < next_column:
-            return 'right'
+            return 1
         if cur_column > next_column:
-            return 'left'
+            return 3
 
 
     """
