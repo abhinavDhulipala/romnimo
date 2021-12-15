@@ -10,10 +10,17 @@ class PololuTIRSLKRobot(PololuDRV8835Robot):
 	:param int left_dir, right_dir:
 		The two corresponding GPIO pins for use to carry the direction
 		bit(s). Represents two states (forward & backwards)
+		
+	add variable for orientation tracking. on every actual turn adjust orientation var
+	0 -> left
+	1 -> facing "down" or south
+	2 -> right 
+	3 -> turn around
 	"""
 	def __init__(self, left_dir=17, right_dir=27):
 		self.left_dir = DigitalOutputDevice(left_dir)
 		self.right_dir = DigitalOutputDevice(right_dir)
+		self.orient: int = 1
 		super().__init__()
 		
 		
@@ -32,19 +39,21 @@ class PololuTIRSLKRobot(PololuDRV8835Robot):
 			self.right_dir.off()
 		self.right_motor.backward(speed)
 		
-	def backward(self, speed=0.1):
+	def backward(self, speed=.1):
 		self._left_motor(speed, True)
 		self._right_motor(speed, True)
 		
-	def forward(self, speed=0.1):
+	def forward(self, speed=.1):
 		self._left_motor(speed, False)
 		self._right_motor(speed, False)
 		
 	def left(self, speed=1):
+		self.orient = (self.orient - 1) % 4
 		self._left_motor(speed, True)
 		self._right_motor(speed, False)
 		
 	def right(self, speed=1):
+		self.orient = (self.orient + 1) % 4
 		self._left_motor(speed, False)
 		self._right_motor(speed, True)
 	
