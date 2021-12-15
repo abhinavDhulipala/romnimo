@@ -1,4 +1,8 @@
 from gpiozero import PololuDRV8835Robot, DigitalOutputDevice
+from picamera.array import PiRGBArray
+from picamera import PiCamera
+from lineDetection import get_vertical_edge, get_horizontal_edge
+from time import sleep
 
 class PololuTIRSLKRobot(PololuDRV8835Robot):
 	
@@ -92,25 +96,62 @@ class PololuTIRSLKRobot(PololuDRV8835Robot):
 			sleep(50)
 
 		
+def run_function(robot):
+	camera = PiCamera()
+	camera.resolution = (640, 480)
+	camera.framerate = 15
+	rawCapture = PiRGBArray(camera, size=(640, 480))
+
+	image = None
+	# robot = PololuTIRSLKRobot()
+	robot.forward(0.03)
+	speed, rest = .07, 0.5
+	standard_vwidth = None
+	standard_hwidth = None
+	change_dir = False
+	i = 0
+
+	# options = {
+	# 	0 : up,
+  #   1 : right,
+	# 	4 : down,
+	# 	9 : left,
+	# }
+
+	# Initialization for the first frame
+	for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+		image = frame.array
+		standard_vwidth = get_vertical_edge(image)
+		standard_hwidth = get_horizontal_edge(image)
+		rawCapture.truncate(0)
+		break
+
+	print('forward')
+	robot._right_motor(speed - 0.02, False)
+	robot._left_motor(speed, False)
+
+	while change_dir == False:
+		for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+			image = frame.array
+			rawCapture.truncate(0)
+			break
 		
+		curr_width = get_vertical_edge(image)
+		end_of_block = get_horizontal_edge(image)
+		if (end_of_block < 150 and i > 2):
+			robot.stop()
+			print("STOP")
+			# send to server
+			return 'stop', robot.orient
+
+		left_speed, right_speed = robot.pd_control(speed, 0.01, 0.01, 0, standard_vwidth, curr_width)
+		left_speed = max(0.08, min(0.1, left_speed))
+		right_speed = max(0.067, min(0.072, right_speed))
+		robot._right_motor(right_speed, False)
+		robot._left_motor(left_speed, False)
+		i += 1
+		sleep(rest)
 
 if __name__ == '__main__':
-	from time import sleep
-	robot = PololuTIRSLKRobot()
-	speed, rest = .2, 5
-	print('forward')
-	robot.forward(speed)
-	sleep(rest)
-	print('backward')
-	robot.backward(speed)
-	sleep(rest)
-	print('switch')
-	robot.switch_dir()
-	sleep(rest)
-	print('left')
-	robot.left(speed)
-	sleep(rest)
-	print('right')
-	robot.right(speed)
-	sleep(rest)
+	pass
 	

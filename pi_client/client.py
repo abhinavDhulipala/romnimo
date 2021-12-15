@@ -1,4 +1,4 @@
-from interface import PololuTIRSLKRobot 
+from interface import PololuTIRSLKRobot, run_function
 import socket
 from time import sleep
 
@@ -26,6 +26,8 @@ def execute_one(state: int) -> bytes:
 	"""
 	replace with stop detection. Potentially from bump sensors
 	"""
+	symbol, orientation = run_function(robot)
+	robot.orient = orientation
 	sleep(2)
 	robot.stop()
 	"""
