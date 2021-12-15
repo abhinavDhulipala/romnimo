@@ -1,30 +1,120 @@
 import numpy as np
 import cv2
 import cv2.aruco as aruco
+import time
 
-cap = cv2.VideoCapture(0) # TODO: Make work with USB cam
+class Aruco_processor:
+    def __init__(self, origin_mark=10):
+        self.marker_size = .1    
+        self.aruco_dictionary = aruco.Dictionary_get(cv2.aruco.DICT_4X4_1000)
+        self.aruco_parameters = aruco.DetectorParameters_create()
+        self.camera_matrix = np.array([[1382.9051260696745, 0, 1005.0528067934058],
+                                    [0, 1379.9417912461442, 541.1493795515057],
+                                    [0, 0, 1]])
+        self.dist_coeff = np.array([0.11798477738494176, -0.1883468380171588, 0.0035953735855806007, 0.0024175441482927108, 0.13373412015090186])
+        self.origin_marker = origin_mark
 
-while(True):
-    ret, frame = cap.read()
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_1000)
-    arucoParameters = aruco.DetectorParameters_create()
-    corners, ids, rejectedImgPoints = aruco.detectMarkers(
-        gray, aruco_dict, parameters=arucoParameters)
-    frame = aruco.drawDetectedMarkers(frame, corners)
-    cv2.imshow('Display', frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-cap.release()
-cv2.destroyAllWindows()
+    # Switch the coordinate frame
+    def inverse_frame(self, rvec, tvec):
+        R, _ = cv2.Rodrigues(rvec)
+        R = np.matrix(R).T
+        invTvec = np.dot(-R, np.matrix(tvec))
+        invRvec, _ = cv2.Rodrigues(R)
+        return invRvec, invTvec
 
-# Takes a stream, finds aruco maker poses in each frame and publishes as a dictionary
-def publishPoses(cam):
-    cap = cv2.VideoCapture(cam)
-    while(True):
-        ret, frame = cap.read()
+    # Get the relative position of one marker in the others frame
+    def relative_position(self, rvec1, tvec1, rvec2, tvec2):
+        rvec1, tvec1 = rvec1.reshape((3, 1)), tvec1.reshape((3, 1))
+        rvec2, tvec2 = rvec2.reshape((3, 1)), tvec2.reshape((3, 1))
+        invRvec, invTvec = self.inverse_frame(rvec2, tvec2)
+        origin_rvec, origin_tvec = self.inverse_frame(invRvec, invTvec)
+        composed = cv2.composeRT(rvec1, tvec1, invRvec, invTvec)
+        composedRvec, composedTvec = composed[0], composed[1]
+        composedRvec = composedRvec.reshape((3, 1))
+        composedTvec = composedTvec.reshape((3, 1))
+        return composedRvec, composedTvec   
+
+    def get_g(self, rvec, tvec):
+        g_matrix = np.identity(4)
+        rmat = cv2.Rodrigues(rvec)[0]
+        g_matrix[:3, :3] = rmat
+        g_matrix[:3, 3] = tvec
+        return np.linalg.inv(g_matrix)
 
 
+    def get_marker_transforms(self, frame, origin_id=10):
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        corners, ids, _ = aruco.detectMarkers(gray, self.aruco_dictionary, parameters=self.aruco_parameters)
+        if ids is None:
+            print("No markers")
+            return None, None, None
+        rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(corners, self.marker_size, self.camera_matrix, self.dist_coeff)
+        origin_idx = np.where(np.array(ids) == origin_id)
+        print(origin_idx)
+        if len(origin_idx) == 0:
+            print("Origin is not in view")
+            return None, None, None
+        new_rvecs = []
+        new_tvecs = []
+        for i in range(len(ids)):
+            r, t = self.relative_position(rvec[origin_idx[0][0]], tvec[origin_idx[0][0]], rvec[i], tvec[i])
+            new_rvecs.append(r)
+            new_tvecs.append(t)
+        return ids, new_rvecs, new_tvecs
 
+    def get_marker_coords_by_id(self, frame, id_num, origin_id=10):
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        corners, ids, _ = aruco.detectMarkers(gray, self.aruco_dictionary, parameters=self.aruco_parameters)
+        if ids is None:
+            print("No markers")
+            return None
+        rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(corners, self.marker_size, self.camera_matrix, self.dist_coeff)
+        origin_idx = -1
+        id_idx = -1
+        ids = np.array(ids)[:, 0]
+        for i in range(len(ids)):
+            if ids[i] == origin_id:
+                origin_idx = i
+            if ids[i] == id_num:
+                id_idx = i
+        if origin_idx < 0 or id_idx < 0:
+            print("Origin or id is not in view")
+            return None
+        g_ac = self.get_g(rvec[origin_idx], tvec[origin_idx])
+        t_c = np.array([tvec[id_idx][0][0], tvec[id_idx][0][1], tvec[id_idx][0][2], 1])
+        return g_ac @ t_c
+
+    def marker_to_grid(self, tvec):
+        return np.array([round(tvec[0] / .2127), round(tvec[1] / .4647)])
+    
 if __name__ == '__main__':
-    publishPoses(0)    #TODO: Make work with USB cam   
+    print("Finding cam")
+    cap = cv2.VideoCapture(1) 
+    print("cam found")
+    ap = Aruco_processor()
+    while(True):
+        time.sleep(.5)
+        ret, frame = cap.read()
+        t1 = ap.get_marker_coords_by_id(frame, 11)
+        t2 = ap.get_marker_coords_by_id(frame, 16)
+        t3 = ap.get_marker_coords_by_id(frame, 13)
+        t4 = ap.get_marker_coords_by_id(frame, 14)
+        t5 = ap.get_marker_coords_by_id(frame, 15)
+        print("t1")
+        if t1 is not None:
+            print(ap.marker_to_grid(t1))
+        print("t2")
+        if t2 is not None:
+            print(ap.marker_to_grid(t2))
+        print("t3")
+        if t3 is not None:
+            print(ap.marker_to_grid(t3))
+        print("t4")
+        if t4 is not None:
+            print(ap.marker_to_grid(t4))
+        print("t5")
+        if t5 is not None:
+            print(ap.marker_to_grid(t5))
+    cap.release()
+    cv2.destroyAllWindows()
+

@@ -1,11 +1,13 @@
 import cv2
-import numpy as np
 
-all_camera_idx_available = []
+cap = cv2.VideoCapture(1) # video capture source camera (Here webcam of laptop) 
+ret,frame = cap.read() # return a single frame in variable `frame`
 
-for camera_idx in range(10):
-    cap = cv2.VideoCapture(camera_idx)
-    if cap.isOpened():
-        print(f'Camera index available: {camera_idx}')
-        all_camera_idx_available.append(camera_idx)
-        cap.release()
+while(True):
+    cv2.imshow('img1',frame) #display the captured image
+    if cv2.waitKey(1) & 0xFF == ord('y'): #save on pressing 'y' 
+        cv2.imwrite('images/c1.png',frame)
+        cv2.destroyAllWindows()
+        break
+
+cap.release()
