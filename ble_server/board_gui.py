@@ -21,7 +21,7 @@ class RoadEnvironment(arcade.Window):
         super().__init__(width, height, title)
 
         self.car_states = shared_robot_states or [0, 0]
-        self.robot_commands = shared_robot_commands or ([''] * 2)
+        self.robot_commands = shared_robot_commands or [-1, -1]
         # Create a 2 dimensional array. A two dimensional
         self.grid: nx.Graph = nx.grid_2d_graph(Config.ROW_COUNT, Config.COLUMN_COUNT)
         self.grid.edges(data=True)
@@ -85,9 +85,6 @@ class RoadEnvironment(arcade.Window):
             self.robot_commands[1] = self.car2.command()
 
         self.resync_grid_with_sprites()
-
-    def ac_sleep(self):
-        sleep()
 
     def closest_rider(self, car):
         if self.riders:

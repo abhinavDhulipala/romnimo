@@ -21,6 +21,8 @@ class Config:
     SCREEN_TITLE = "Road Projection"
     # interval of refresh rate in seconds
     BLE_REFRESH_RATE = os.getenv('BLE_REFRESH_RATE') or 1.5
+    # ble buffer size
+    BUFF_SIZE = 1024
 
 class RoadTile(Enum):
     CRASH = arcade.color.CRIMSON_GLORY
