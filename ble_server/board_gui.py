@@ -24,7 +24,7 @@ class RoadEnvironment(arcade.Window):
 
         self.car_states = shared_robot_states or [0, 0]
         self.robot_commands = shared_robot_commands or [-1, -1]
-        self.robot_orient = shared_robot_loc or [0, (0, 0)]
+        self.robot_orient = shared_robot_loc or [0, 0, 0]
         # Create a 2 dimensional array. A two dimensional
         self.grid: nx.Graph = nx.grid_2d_graph(Config.ROW_COUNT, Config.COLUMN_COUNT)
         self.grid.edges(data=True)
@@ -62,13 +62,17 @@ class RoadEnvironment(arcade.Window):
         arcade.schedule(self.aruco_crash_listener, Config.ARUCO_REFRESH_RATE)
         arcade.schedule(self.aruco_car_tracker, Config.ARUCO_CAR1_POS)
 
-
+    """Track the main car"""
     def aruco_car_tracker(self, delta_time):
         ret, frame = self.capture.read()
         if not ret:
             return
-        self.robot_orient[:] = [self.aruco_processor.get_car_deg(frame),
-                                self.aruco_processor.get_car_pos(frame)]
+
+        if self.aruco_processor.get_car_deg(frame) is not None and self.aruco_processor.get_car_pos(frame) is not None:
+            i, j = list(map(int, self.aruco_processor.get_car_pos(frame)))
+            self.robot_orient[0] = i
+            self.robot_orient[1] = j
+            self.robot_orient[2] = self.aruco_processor.get_car_deg(frame)
 
 
     """

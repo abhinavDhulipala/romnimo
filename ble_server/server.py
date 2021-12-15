@@ -52,32 +52,35 @@ def send_to_car(addr, commands, robot_state, car_num):
 
     print('connection closed')
 
-def pid_aruco_delivery():
-    def netcat(host, port, content):
+def pid_aruco_delivery(array):
+    def netcat(host, port):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((host, int(port)))
-        s.sendall(content.encode())
-        s.shutdown(socket.SHUT_WR)
-        while True:
-            data = s.recv(4096)
-            if not data:
-                break
-            print(repr(data))
-        s.close()
+        print(f'array for pid {array}')
 
-    netcat('192.168.42.4', 40000, 'Hi')
+        try:
+            while True:
+                if any(array) and not any([i < 0 for i in array]):
+                    s.sendall(bytearray(' '.join(map(str, array)), 'UTF-8'))
+                sleep(.25)
+        except Exception as e:
+            print(f'closed due to exception {e}')
+            s.shutdown(socket.SHUT_WR)
+            s.close()
+    netcat('192.168.42.4', 40000)
 
 
 def server_inline(env='local'):
     server_funcs = {
         'local': test_asynch_local,
+        'netcat_pos': pid_aruco_delivery
     }
     assert env in server_funcs, 'invalid server function'
 
     with SharedMemoryManager() as smm:
         robot_states = smm.ShareableList([0] * 2)
         robot_commands = smm.ShareableList([-1] * 2)
-        car1_deg_and_pos = smm.ShareableList([1, (0, 0)])
+        car1_deg_and_pos = smm.ShareableList([0, 0, 0])
         gui = Process(target=run_gui, kwargs={
             'shared_robot_states': robot_states,
             'shared_robot_commands': robot_commands,
@@ -86,15 +89,15 @@ def server_inline(env='local'):
 
         car1_command = Process(target=send_to_car, args=(car1_mac_addr, robot_commands, robot_states, 1))
         gui.start()
-        car2_command.start()
-        car1_command.start()
+        #car2_command.start()
+        #car1_command.start()
         sleep(.05)
-        server_funcs[env](robot_states)
-        car2_command.join()
-        car1_command.join()
+        server_funcs[env](car1_deg_and_pos)
+        #car2_command.join()
+        #car1_command.join()
         gui.join()
         print('done')
 
 
 if __name__ == '__main__':
-    server_inline()
+    server_inline('netcat_pos')

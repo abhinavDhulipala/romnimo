@@ -1,12 +1,10 @@
 from interface import PololuTIRSLKRobot 
 import socket
 from time import sleep
+from multiprocessing.managers import SharedMemoryManager
 
 
-robot = PololuTIRSLKRobot()
-speed = .4
-
-def execute_one(state: int) -> bytes:
+def execute_one(state: int, robot, speed) -> bytes:
 	
 	diff = abs(robot.orient - state)
 	for _ in range(diff):
@@ -46,21 +44,26 @@ def main():
 	s.listen(backlog)
 	log_dir_from_int = {i: dr for i, dr in zip(range(-1, 4),
 	 ['stay', 'up', 'right', 'down', 'left'])}
-	try:
-		client, address = s.accept()
-		print(f'client {client}')
-		print(address)
-		while True:
-			data = client.recv(size)
-			if data:
-				data_int = int(data)
-				print(log_dir_from_int.get(data_int, f'invalid dir sent {data_int}'))
-				out = execute_one(data_int)
-				client.send(out)
-	except Exception as e:	
-		print(f"Closing socket due to {e}")	
-		client.close()
-		s.close()
+	with SharedMemoryManager() as smm:
+		robot = PololuTIRSLKRobot()
+		speed = .4
+		point_and_deg = smm.ShareableList([0, 0, 0])
+
+		try:
+			client, address = s.accept()
+			print(f'client {client}')
+			print(address)
+			while True:
+				data = client.recv(size)
+				if data:
+					data_int = int(data)
+					print(log_dir_from_int.get(data_int, f'invalid dir sent {data_int}'))
+					out = execute_one(data_int, robot, speed)
+					client.send(out)
+		except Exception as e:
+			print(f"Closing socket due to {e}")
+			client.close()
+			s.close()
 
 if __name__ == "__main__":
 	main()

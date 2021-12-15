@@ -17,13 +17,17 @@ class PololuTIRSLKRobot(PololuDRV8835Robot):
 	2 -> right 
 	3 -> turn around
 	"""
-	def __init__(self, left_dir=17, right_dir=27):
+	def __init__(self, left_dir=17, right_dir=27, orient_pipe=None):
 		self.left_dir = DigitalOutputDevice(left_dir)
 		self.right_dir = DigitalOutputDevice(right_dir)
-		self.orient: int = 1
+		self.orient = orient_pipe or [0, 0, 0]
 		super().__init__()
-		
-		
+
+	def position(self):
+		return self.orient[:2]
+
+	def degrees(self):
+		return self.orient[2]
 
 	def _left_motor(self, speed=1, forward=True):
 		if forward:
