@@ -131,8 +131,8 @@ class Aruco_processor:
             return None
         return np.array([round(tvec[0] / .2127), round(tvec[1] / .4647)])
     
-    def get_id_pos(self, frame, id)
-        return self.marker_to_grid(self.get_marker_orientation_by_id(frame, id))
+    def get_id_pos(self, frame, id):
+        return self.marker_to_grid(self.get_marker_coords_by_id(frame, id))
 
 
     # Call to get the car position
@@ -148,7 +148,7 @@ class Aruco_processor:
         crashes_pose.append(self.get_id_pos(frame, 13))
         crashes_pose.append(self.get_id_pos(frame, 14))
         crashes_pose.append(self.get_id_pos(frame, 15))
-        return set(filter(lambda e: e is not None, crashes_pose))
+        return list(filter(lambda e: e is not None, crashes_pose))
 
 
 

@@ -52,6 +52,21 @@ def send_to_car(addr, commands, robot_state, car_num):
 
     print('connection closed')
 
+def pid_aruco_delivery():
+    def netcat(host, port, content):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((host, int(port)))
+        s.sendall(content.encode())
+        s.shutdown(socket.SHUT_WR)
+        while True:
+            data = s.recv(4096)
+            if not data:
+                break
+            print(repr(data))
+        s.close()
+
+    netcat('192.168.42.4', 40000, 'Hi')
+
 
 def server_inline(env='local'):
     server_funcs = {
@@ -62,9 +77,11 @@ def server_inline(env='local'):
     with SharedMemoryManager() as smm:
         robot_states = smm.ShareableList([0] * 2)
         robot_commands = smm.ShareableList([-1] * 2)
+        car1_deg_and_pos = smm.ShareableList([1, (0, 0)])
         gui = Process(target=run_gui, kwargs={
             'shared_robot_states': robot_states,
-            'shared_robot_commands': robot_commands})
+            'shared_robot_commands': robot_commands,
+            'shared_robot_loc': car1_deg_and_pos})
         car2_command = Process(target=send_to_car, args=(car2_mac_addr, robot_commands, robot_states, 2))
 
         car1_command = Process(target=send_to_car, args=(car1_mac_addr, robot_commands, robot_states, 1))

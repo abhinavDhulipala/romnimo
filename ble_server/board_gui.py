@@ -15,7 +15,8 @@ class RoadEnvironment(arcade.Window):
     def __init__(self, width, height, title, car1=(3, 3), car2=(3, 2),
                  riders=None,
                  shared_robot_states=None,
-                 shared_robot_commands=None):
+                 shared_robot_commands=None,
+                 shared_robot_loc=None):
         """
         Set up the application.
         """
@@ -23,6 +24,7 @@ class RoadEnvironment(arcade.Window):
 
         self.car_states = shared_robot_states or [0, 0]
         self.robot_commands = shared_robot_commands or [-1, -1]
+        self.robot_orient = shared_robot_loc or [0, (0, 0)]
         # Create a 2 dimensional array. A two dimensional
         self.grid: nx.Graph = nx.grid_2d_graph(Config.ROW_COUNT, Config.COLUMN_COUNT)
         self.grid.edges(data=True)
@@ -50,19 +52,44 @@ class RoadEnvironment(arcade.Window):
         self.resync_grid_with_sprites()
 
         ### Aruco init
+        print('initializing video')
         self.capture = cv2.VideoCapture(1)
+        print('camera found!')
         self.aruco_processor = Aruco_processor()
 
         # schedule listening to the cars bluetooth
         arcade.schedule(self.ble_listen, Config.BLE_REFRESH_RATE)
+        arcade.schedule(self.aruco_crash_listener, Config.ARUCO_REFRESH_RATE)
+        arcade.schedule(self.aruco_car_tracker, Config.ARUCO_CAR1_POS)
+
+
+    def aruco_car_tracker(self, delta_time):
+        ret, frame = self.capture.read()
+        if not ret:
+            return
+        self.robot_orient[:] = [self.aruco_processor.get_car_deg(frame),
+                                self.aruco_processor.get_car_pos(frame)]
+
 
     """
     listen to Aruco CV changes in frame every X seconds
     """
-    def aruco_crash_listener(self):
+    def aruco_crash_listener(self, delta_time):
         ret, frame = self.capture.read()
+        if not ret:
+            return
         crash_coords = self.aruco_processor.get_crash_tiles(frame)
-        pass
+        print(crash_coords)
+        crash_coords = list(map(tuple, crash_coords))
+        [self._adj_tile_edges((i, j), RoadTile.CRASH, float('inf')) for i, j in crash_coords]
+        for (i, j), state in self.grid.nodes.data('state'):
+            if state == RoadTile.CRASH and (i, j) not in crash_coords:
+                self._adj_tile_edges((i, j), RoadTile.EMPTY, 1)
+        self.resync_grid_with_sprites()
+        self.car2.refresh_spt()
+        self.car1.refresh_spt()
+
+
 
 
 
