@@ -50,35 +50,12 @@ def send_to_car(addr, commands, robot_state, car_num):
             print(f'msg received {msg}')
             robot_state[index] = int(msg == b'stopped')
 
-
-
     print('connection closed')
-
-
-def receive_from_car(commands, car_num):
-    host_mac = 'E4:A4:71:17:4A:0C'
-    s = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
-    s.bind((host_mac, car_num))
-    client, addr = s.accept()
-    try:
-        print(f'pi {car_num} := {addr}')
-        while True:
-            stop_state = client.recv(Config.BUFF_SIZE)
-            if stop_state:
-                stop_int = int(stop_state)
-                print(stop_state)
-                commands[car_num] = stop_int
-    except Exception as e:
-        print(f'socket closed due to {e}')
-        client.close()
-        s.close()
-
 
 
 def server_inline(env='local'):
     server_funcs = {
         'local': test_asynch_local,
-        'c2pi': receive_from_car
     }
     assert env in server_funcs, 'invalid server function'
 
@@ -88,23 +65,16 @@ def server_inline(env='local'):
         gui = Process(target=run_gui, kwargs={
             'shared_robot_states': robot_states,
             'shared_robot_commands': robot_commands})
-        """car1_command = Process(target=send_to_car, args=(car1_mac_addr,
-                                                         robot_states,
-                                                         robot_commands,
-                                                         1))
-                                                         """
+        car2_command = Process(target=send_to_car, args=(car2_mac_addr, robot_commands, robot_states, 2))
 
-        car1_command = Process(target=send_to_car, args=(car1_mac_addr,
-                                                         robot_commands,
-                                                         robot_states,
-                                                         1))
+        car1_command = Process(target=send_to_car, args=(car1_mac_addr, robot_commands, robot_states, 1))
         gui.start()
+        car2_command.start()
         car1_command.start()
-        # car1_receive.start()
         sleep(.05)
         server_funcs[env](robot_states)
+        car2_command.join()
         car1_command.join()
-        # car1_receive.join()
         gui.join()
         print('done')
 

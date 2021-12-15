@@ -4,8 +4,8 @@ import os
 
 class Config:
     # Set how many rows and columns we will have
-    ROW_COUNT = 6
-    COLUMN_COUNT = 6
+    ROW_COUNT = 4
+    COLUMN_COUNT = 4
 
     # This sets the WIDTH and HEIGHT of each grid location
     WIDTH = 60

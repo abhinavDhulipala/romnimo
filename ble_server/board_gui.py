@@ -3,7 +3,6 @@ import networkx as nx
 import arcade
 from utils import Car, Rider
 from typing import List
-from time import sleep
 
 
 class RoadEnvironment(arcade.Window):
@@ -11,7 +10,7 @@ class RoadEnvironment(arcade.Window):
     Main application class
     """
 
-    def __init__(self, width, height, title, car1=(5, 5), car2=(4, 5),
+    def __init__(self, width, height, title, car1=(3, 3), car2=(3, 2),
                  riders=None,
                  shared_robot_states=None,
                  shared_robot_commands=None):
@@ -51,7 +50,7 @@ class RoadEnvironment(arcade.Window):
         # schedule listening to the cars bluetooth
         arcade.schedule(self.ble_listen, Config.BLE_REFRESH_RATE)
 
-        sleep(.05)
+
 
     """
     listener for inputs from robots
