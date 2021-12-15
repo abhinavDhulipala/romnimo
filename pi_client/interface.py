@@ -37,13 +37,13 @@ class PololuTIRSLKRobot(PololuDRV8835Robot):
 			self.right_dir.on()
 		else:
 			self.right_dir.off()
-		self.left_motor.backward(speed)
+		self.right_motor.backward(speed)
 		
-	def forward(self, speed=1):
+	def backward(self, speed=.1):
 		self._left_motor(speed, True)
 		self._right_motor(speed, True)
 		
-	def backward(self, speed=1):
+	def forward(self, speed=.1):
 		self._left_motor(speed, False)
 		self._right_motor(speed, False)
 		
