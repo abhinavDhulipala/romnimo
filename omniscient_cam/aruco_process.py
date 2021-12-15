@@ -127,18 +127,30 @@ class Aruco_processor:
         return self.rvec_to_deg(rvec[origin_idx], rvec[id_idx])
 
     def marker_to_grid(self, tvec):
+        if tvec is None:
+            return None
         return np.array([round(tvec[0] / .2127), round(tvec[1] / .4647)])
     
+    def get_id_pos(self, frame, id)
+        return self.marker_to_grid(self.get_marker_orientation_by_id(frame, id))
+
 
     # Call to get the car position
     def get_car_pos(self, frame):
-        return self.marker_to_grid(self.get_marker_orientation_by_id(frame, 16))
+        return self.get_id_pos(frame, 16)
 
     # Call to get the car orientation
     def get_car_deg(self, frame):
         return self.get_marker_orientation_by_id(frame, 16)
 
-    #def get_crash_tiles(self)
+    def get_crash_tiles(self, frame):
+        crashes_pose = []
+        crashes_pose.append(self.get_id_pos(frame, 13))
+        crashes_pose.append(self.get_id_pos(frame, 14))
+        crashes_pose.append(self.get_id_pos(frame, 15))
+        return set(filter(lambda e: e is not None, crashes_pose))
+
+
 
 if __name__ == '__main__':
     print("Finding cam")
