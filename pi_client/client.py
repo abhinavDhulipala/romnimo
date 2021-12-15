@@ -2,6 +2,8 @@ from interface import PololuTIRSLKRobot
 import socket
 from time import sleep
 from multiprocessing.managers import SharedMemoryManager
+from multiprocessing.context import Process
+from aruco_pd_client import run
 
 
 def execute_one(state: int, robot, speed) -> bytes:
@@ -45,9 +47,16 @@ def main():
 	log_dir_from_int = {i: dr for i, dr in zip(range(-1, 4),
 	 ['stay', 'up', 'right', 'down', 'left'])}
 	with SharedMemoryManager() as smm:
-		robot = PololuTIRSLKRobot()
-		speed = .4
 		point_and_deg = smm.ShareableList([0, 0, 0])
+		robot = PololuTIRSLKRobot(orient_pipe=point_and_deg)
+		speed = .4
+
+		orient_aruco_proc = Process(target=run, kwargs={
+			'port': 4000,
+			'array': point_and_deg
+		})
+
+		orient_aruco_proc.start()
 
 		try:
 			client, address = s.accept()
@@ -64,6 +73,7 @@ def main():
 			print(f"Closing socket due to {e}")
 			client.close()
 			s.close()
+		orient_aruco_proc.join()
 
 if __name__ == "__main__":
 	main()

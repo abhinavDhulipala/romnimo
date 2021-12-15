@@ -73,6 +73,13 @@ def main():
     print('exiting')
 
 
+def run(arr):
+    server = SocketServer(port=40000, array=arr)
+    server.run_server()
+    print('exiting')
+
+
+
 
 if __name__ == '__main__':
     main()
