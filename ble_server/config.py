@@ -23,6 +23,8 @@ class Config:
     BLE_REFRESH_RATE = os.getenv('BLE_REFRESH_RATE') or 1.5
     # ble buffer size
     BUFF_SIZE = 1024
+    # Aruco refresh rate
+    ARUCO_REFRESH_RATE = os.getenv('ARUCO_REFRESH_RATE') or .25
 
 class RoadTile(Enum):
     CRASH = arcade.color.CRIMSON_GLORY

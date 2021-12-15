@@ -3,6 +3,8 @@ import networkx as nx
 import arcade
 from utils import Car, Rider
 from typing import List
+import cv2
+from omniscient_cam.aruco_process import Aruco_processor
 
 
 class RoadEnvironment(arcade.Window):
@@ -47,8 +49,20 @@ class RoadEnvironment(arcade.Window):
             self.grid_sprite_list.append(sprite)
         self.resync_grid_with_sprites()
 
+        ### Aruco init
+        self.capture = cv2.VideoCapture(1)
+        self.aruco_processor = Aruco_processor()
+
         # schedule listening to the cars bluetooth
         arcade.schedule(self.ble_listen, Config.BLE_REFRESH_RATE)
+
+    """
+    listen to Aruco CV changes in frame every X seconds
+    """
+    def aruco_crash_listener(self):
+        ret, frame = self.capture.read()
+        crash_coords = self.aruco_processor.get_crash_tiles(frame)
+        pass
 
 
 
