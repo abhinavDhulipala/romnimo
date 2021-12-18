@@ -11,6 +11,7 @@ camera_matrix = np.array([[1382.905, 0, 1005.053],
                             [0, 0, 1]])
 dist_coeff = np.array([.118, -.188, .004, .002, .134])
 
+# From the aruco opencv documentation https://docs.opencv.org/4.x/d5/dae/tutorial_aruco_detection.html
 while(True):
     ret, frame = cap.read()
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
