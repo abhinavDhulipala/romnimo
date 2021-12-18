@@ -1,4 +1,5 @@
 # Line Detection
+# Inspired from pyimagesearch.com
 import cv2
 import numpy as np
 import math
