@@ -16,6 +16,7 @@ class Aruco_processor:
         self.origin_marker = origin_mark
 
     # Switch the coordinate frame
+    # This method come from here: https://aliyasineser.medium.com/calculation-relative-positions-of-aruco-markers-eee9cc4036e3
     def inverse_frame(self, rvec, tvec):
         R, _ = cv2.Rodrigues(rvec)
         R = np.matrix(R).T
@@ -24,6 +25,7 @@ class Aruco_processor:
         return invRvec, invTvec
 
     # Get the relative position of one marker in the others frame
+    # This method comes from here: https://aliyasineser.medium.com/calculation-relative-positions-of-aruco-markers-eee9cc4036e3
     def relative_position(self, rvec1, tvec1, rvec2, tvec2):
         rvec1, tvec1 = rvec1.reshape((3, 1)), tvec1.reshape((3, 1))
         rvec2, tvec2 = rvec2.reshape((3, 1)), tvec2.reshape((3, 1))
